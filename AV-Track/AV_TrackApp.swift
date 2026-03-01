@@ -1,0 +1,17 @@
+//
+//  AV_TrackApp.swift
+//  AV-Track
+//
+//  Created by Karlo Šibalić on 01.03.2026..
+//
+
+import SwiftUI
+
+@main
+struct AV_TrackApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+}
