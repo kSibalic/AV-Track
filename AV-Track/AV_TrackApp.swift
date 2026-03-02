@@ -13,5 +13,13 @@ struct AV_TrackApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [
+            InventoryItem.self,
+            ItemLocation.self,
+            ItemDependency.self,
+            JobManifest.self,
+            ManifestItem.self,
+            SyncMutation.self
+        ])
     }
 }
