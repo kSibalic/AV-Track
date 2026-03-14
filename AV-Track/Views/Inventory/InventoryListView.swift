@@ -11,10 +11,12 @@ import SwiftData
 struct InventoryListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \InventoryItem.name) private var items: [InventoryItem]
+    @State private var scanner = ScannerInputManager.shared
 
     @State private var searchText = ""
     @State private var selectedCategory: String?
     @State private var showingAddItem = false
+    @State private var scannedItem: InventoryItem?
 
     private var categories: [String] {
         Array(Set(items.map(\.category))).sorted()
@@ -59,6 +61,17 @@ struct InventoryListView: View {
                 ItemFormView(mode: .add)
             }
         }
+        .navigationDestination(item: $scannedItem) { item in
+            InventoryDetailView(item: item)
+        }
+        .onChange(of: scanner.lastScannedSKU) { _, newSKU in
+            guard let sku = newSKU else { return }
+            
+            if let matchedItem = items.first(where: { $0.sku.lowercased() == sku.lowercased()}) {
+                scanner.lastScannedSKU = nil
+                scannedItem = matchedItem
+            }
+        }
     }
 
     @ViewBuilder
@@ -100,9 +113,6 @@ struct InventoryListView: View {
                 }
             }
             .onDelete(perform: deleteItems)
-        }
-        .navigationDestination(for: InventoryItem.self) { item in
-            InventoryDetailView(item: item)
         }
     }
 

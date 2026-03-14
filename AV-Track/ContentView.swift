@@ -40,6 +40,7 @@ struct ContentView: View {
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        .scannerEnvironment()
     }
 
     @ViewBuilder
