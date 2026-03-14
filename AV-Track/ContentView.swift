@@ -49,7 +49,7 @@ struct ContentView: View {
         case .inventory:
             InventoryListView()
         case .transfer:
-            TransferPlaceholderView()
+            TransferView()
         case .manifests:
             ManifestPlaceholderView()
         case .settings:

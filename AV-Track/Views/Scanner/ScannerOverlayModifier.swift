@@ -10,48 +10,50 @@ import SwiftUI
 struct ScannerOverlayModifier: ViewModifier {
     @State private var scanner = ScannerInputManager.shared
     @FocusState private var isFocused: Bool
-    
+
     func body(content: Content) -> some View {
-        ZStack(alignment: .top) {
-            content
-                .focusable()
-                .focused($isFocused)
-                .focusEffectDisabled()
-                .onKeyPress(phases: .down) { press in
-                    scanner.handleKeyPress(press)
-                }
-                .onAppear {
-                    isFocused = true
-                }
-            
-            if let sku = scanner.lastScannedSKU {
-                HStack(spacing: 12) {
-                    Image(systemName: "barcode.viewfinder")
-                        .font(.title2)
-                        .foregroundStyle(.white)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Scanned")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.8))
-                        
-                        Text(sku)
-                            .font(.headline.monospaced())
-                            .foregroundStyle(.white)
+        content
+            .background {
+                Color.clear
+                    .focusable()
+                    .focused($isFocused)
+                    .focusEffectDisabled()
+                    .onKeyPress(phases: .down) { press in
+                        scanner.handleKeyPress(press)
                     }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.gray.opacity(0.8))
-                .background(Material.ultraThin)
-                .clipShape(Capsule())
-                .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
-                .padding(.top, 16)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(100)
+                    .onAppear {
+                        isFocused = true
+                    }
             }
-        }
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: scanner.lastScannedSKU)
+            .overlay(alignment: .top) {
+                if let sku = scanner.lastScannedSKU {
+                    HStack(spacing: 12) {
+                        Image(systemName: "barcode.viewfinder")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scanned")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.8))
+                            
+                            Text(sku)
+                                .font(.headline.monospaced())
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.gray.opacity(0.8))
+                    .background(Material.ultraThin)
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+                    .padding(.top, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(100)
+                }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: scanner.lastScannedSKU)
     }
 }
 

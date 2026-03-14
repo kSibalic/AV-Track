@@ -76,7 +76,7 @@ struct ItemFormView: View {
             }
 
             LabeledContent {
-                TextField("e.g. Allem & Heath SQ6", text: $name)
+                TextField("e.g. Allen & Heath SQ6", text: $name)
                     .multilineTextAlignment(.trailing)
             } label: {
                 Label("Name", systemImage: "textformat")
