@@ -10,9 +10,17 @@ import SwiftData
 
 @main
 struct AV_TrackApp: App {
+    @State private var authManager = AuthManager.shared
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if authManager.isLoading && authManager.session == nil {
+                ProgressView("Starting AV-Track")
+            } else if authManager.session != nil {
+                ContentView()
+            } else {
+                LoginView()
+            }
         }
         .modelContainer(for: [
             InventoryItem.self,

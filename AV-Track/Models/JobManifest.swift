@@ -13,7 +13,7 @@ enum ManifestStatus: String, Codable, CaseIterable, Identifiable {
     case packed =   "Packed"
     case returned = "Returned"
     
-    var id: String { rawValue }
+    var id: String { rawValue }
 }
 
 @Model

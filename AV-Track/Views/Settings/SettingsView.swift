@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
+import Auth
 
 struct SettingsView: View {
     @AppStorage("printerIPAddress") private var printerIP = ""
-    @AppStorage("supabaseURL") private var supabaseURL = ""
-    @AppStorage("supabaseAnonKey") private var supabaseAnonKey = ""
+    @State private var authManager = AuthManager.shared
 
     var body: some View {
         Form {
@@ -40,46 +40,42 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Sync
+    // MARK: - Sync & Auth
     private var syncSection: some View {
         Section {
-            LabeledContent {
-                TextField("https://your-project.supabase.co", text: $supabaseURL)
-                    .textContentType(.URL)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .multilineTextAlignment(.trailing)
-            } label: {
-                Label("Project URL", systemImage: "link")
+            if let user = authManager.session?.user {
+                LabeledContent {
+                    Text(user.email ?? "Unknown Email")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label("Logged In As", systemImage: "person.circle.fill")
+                }
             }
-
-            LabeledContent {
-                SecureField("Anon key", text: $supabaseAnonKey)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .multilineTextAlignment(.trailing)
-            } label: {
-                Label("Anon Key", systemImage: "key")
-            }
-
-            // TODO: Sync status
+            
             LabeledContent {
                 Text("—")
                     .foregroundStyle(.secondary)
             } label: {
                 Label("Pending Mutations", systemImage: "arrow.triangle.2.circlepath")
             }
-
+            
             Button {
                 // TODO: Manual sync trigger
             } label: {
                 Label("Sync Now", systemImage: "arrow.clockwise")
             }
-            .disabled(supabaseURL.isEmpty || supabaseAnonKey.isEmpty)
+            
+            Button(role: .destructive) {
+                Task {
+                    await authManager.logout()
+                }
+            } label: {
+                Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+            }
         } header: {
             Text("Supabase")
         } footer: {
-            Text("Configure your Supabase project credentials. All data syncs automatically when online.")
+            Text("Configuration for the backend database and syncing engine.")
         }
     }
 
