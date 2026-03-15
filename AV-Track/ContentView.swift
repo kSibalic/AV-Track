@@ -58,28 +58,6 @@ struct ContentView: View {
     }
 }
 
-struct TransferPlaceholderView: View {
-    var body: some View {
-        ContentUnavailableView(
-            "Transfer Mode",
-            systemImage: "arrow.left.arrow.right",
-            description: Text("Scan items to move them between locations.")
-        )
-        .navigationTitle("Transfer")
-    }
-}
-
-struct ManifestPlaceholderView: View {
-    var body: some View {
-        ContentUnavailableView(
-            "Job Manifests",
-            systemImage: "list.clipboard.fill",
-            description: Text("Create and manage packing lists for events.")
-        )
-        .navigationTitle("Manifests")
-    }
-}
-
 #Preview {
     ContentView()
         .modelContainer(for: [

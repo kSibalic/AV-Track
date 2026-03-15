@@ -14,6 +14,7 @@ struct InventoryDetailView: View {
 
     @State private var showingEditSheet = false
     @State private var showingAddLocation = false
+    @State private var showingPrintSheet = false
     @State private var newLocationName = ""
     @State private var newLocationQuantity = 1
 
@@ -34,7 +35,7 @@ struct InventoryDetailView: View {
                     }
 
                     Button {
-                        // TODO: Set up wiring
+                        showingPrintSheet = true
                     } label: {
                         Label("Print Label", systemImage: "printer.fill")
                     }
@@ -47,6 +48,9 @@ struct InventoryDetailView: View {
             NavigationStack {
                 ItemFormView(mode: .edit(item))
             }
+        }
+        .sheet(isPresented: $showingPrintSheet) {
+            PrintLabelView(item: item)
         }
         .alert("Add Location", isPresented: $showingAddLocation) {
             TextField("Location name", text: $newLocationName)
