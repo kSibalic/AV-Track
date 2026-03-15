@@ -59,13 +59,23 @@ final class TransferViewModel {
         destination.lastUpdated = Date()
         source.lastUpdated = Date()
         
-        let mutation = SyncMutation(
-            entityType: "ItemLocation",
-            entityId: destination.id,
-            action: .update,
-            payload: "{\"locationName\": \"\(destinationLocation)\", \"quantity\": \(destination.quantity)}".data(using: .utf8)!
-        )
-        modelContext.insert(mutation)
+        let payload: [String: Any] = [
+            "id": destination.id.uuidString,
+            "item_id": item.id.uuidString,
+            "location_name": destinationLocation,
+            "quantity": destination.quantity,
+            "last_updated": ISO8601DateFormatter().string(from: destination.lastUpdated)
+        ]
+        
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            let mutation = SyncMutation(
+                entityType: "ItemLocation",
+                entityId: destination.id,
+                action: .update,
+                payload: data
+            )
+            modelContext.insert(mutation)
+        }
         
         try? modelContext.save()
         

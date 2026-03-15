@@ -85,7 +85,7 @@ final class SyncEngine {
             let action = mutation.action
             
             if action == .update {
-                try await table.update(jsonDict).eq("id", value: mutation.entityId.uuidString).execute()
+                try await table.upsert(jsonDict).execute()
             } else if action == .create {
                 try await table.insert(jsonDict).execute()
             } else if action == .delete {
