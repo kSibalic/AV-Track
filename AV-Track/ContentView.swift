@@ -51,7 +51,7 @@ struct ContentView: View {
         case .transfer:
             TransferView()
         case .manifests:
-            ManifestPlaceholderView()
+            ManifestListView()
         case .settings:
             SettingsView()
         }
