@@ -94,11 +94,11 @@ struct PrintLabelView: View {
     }
     
     private func generatePreview() {
-        Task.detached(priority: .userInitiated) {
-            let image = DataMatrixGenerator.generate(from: self.item.sku)
-            Task { @MainActor in
-                self.labelImage = image
-            }
+        let skuToGenerate = item.sku
+        
+        Task { @MainActor in
+            let image = BarcodeGenerator.generate(from: skuToGenerate)
+            self.labelImage = image ?? UIImage(systemName: "exclamationmark.triangle.fill")
         }
     }
     

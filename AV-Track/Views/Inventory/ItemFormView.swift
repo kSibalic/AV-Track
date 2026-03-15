@@ -143,6 +143,9 @@ struct ItemFormView: View {
     }
 
     private func save() {
+        let savedItem: InventoryItem
+        let actionEnum: SyncAction
+        
         switch mode {
         case .add:
             let item = InventoryItem(
@@ -153,6 +156,8 @@ struct ItemFormView: View {
                 totalStock: totalStock
             )
             modelContext.insert(item)
+            savedItem = item
+            actionEnum = .create
 
         case .edit(let item):
             item.sku = sku.trimmingCharacters(in: .whitespaces)
@@ -160,6 +165,27 @@ struct ItemFormView: View {
             item.isSerialized = isSerialized
             item.category = category.trimmingCharacters(in: .whitespaces)
             item.totalStock = totalStock
+            savedItem = item
+            actionEnum = .update
+        }
+        
+        let payload: [String: Any] = [
+            "id": savedItem.id.uuidString,
+            "sku": savedItem.sku,
+            "name": savedItem.name,
+            "is_serialized": savedItem.isSerialized,
+            "category": savedItem.category,
+            "total_stock": savedItem.totalStock
+        ]
+                
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            let mutation = SyncMutation(
+                entityType: "inventoryitem",
+                entityId: savedItem.id,
+                action: actionEnum,
+                payload: data
+            )
+            modelContext.insert(mutation)
         }
 
         dismiss()

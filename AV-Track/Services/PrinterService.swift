@@ -22,6 +22,13 @@ final class PrinterService {
         isPrinting = true
         printError = nil
         
+        guard let paddedImage = padImageToSquare(image: image),
+              let cgImage = paddedImage.cgImage else {
+            self.printError = "Invalid label image format."
+            self.isPrinting = false
+            return
+        }
+        
         await Task.detached(priority: .userInitiated) {
             let channel = BRLMChannel(wifiIPAddress: ipAddress)
             let result = BRLMPrinterDriverGenerator.open(channel)
@@ -48,15 +55,11 @@ final class PrinterService {
             // TODO: Allow user to choose between different tape sizes
             settings.labelSize = .width24mm
             settings.autoCut = true
-            settings.resolution = .high
-            
-            guard let cgImage = image.cgImage else {
-                Task { @MainActor in
-                    self.printError = "Invalid label image format."
-                    self.isPrinting = false
-                }
-                return
-            }
+            settings.halfCut = true
+            settings.resolution = .normal
+            settings.scaleMode = .fitPageAspect
+            settings.hAlignment = .center
+            settings.vAlignment = .center
             
             let printResult = driver.printImage(with: cgImage, settings: settings)
             
@@ -67,5 +70,27 @@ final class PrinterService {
                 self.isPrinting = false
             }
         }.value
+    }
+    
+    private func padImageToSquare(image: UIImage) -> UIImage? {
+        let sideLength = max(image.size.width, image.size.height)
+        let targetSize = CGSize(width: sideLength, height: sideLength)
+        
+        UIGraphicsBeginImageContextWithOptions(targetSize, false, image.scale)
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+        
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(CGRect(origin: .zero, size: targetSize))
+        
+        let origin = CGPoint(
+            x: (targetSize.width - image.size.width) / 2,
+            y: (targetSize.height - image.size.height) / 2
+        )
+        image.draw(in: CGRect(origin: origin, size: image.size))
+        
+        let paddedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return paddedImage
     }
 }

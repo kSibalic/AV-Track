@@ -15,6 +15,7 @@ struct ScannerOverlayModifier: ViewModifier {
         content
             .background {
                 Color.clear
+                    .ignoresSafeArea()
                     .focusable()
                     .focused($isFocused)
                     .focusEffectDisabled()

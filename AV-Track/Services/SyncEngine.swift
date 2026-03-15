@@ -65,28 +65,35 @@ final class SyncEngine {
         isSyncing = false
     }
     
-    private func replay(mutation: SyncMutation) async throws {
-        let table = supabase.from(mutation.entityType.lowercased())
-        
-        guard let jsonDict = try? JSONDecoder().decode([String: AnyJSON].self, from: mutation.payload) else {
-            print("Failed to decode mutation payload")
-            return
+    private func tableName(for entityType: String) -> String {
+        switch entityType.lowercased() {
+        case "inventoryitem": return "inventory_items"
+        case "itemlocation": return "item_locations"
+        case "itemdependency": return "item_dependencies"
+        case "jobmanifest": return "job_manifests"
+        case "manifestitem": return "manifest_items"
+        default: return entityType.lowercased()
         }
-        
-        switch mutation.action {
-        case .update:
-            try await table.update(jsonDict)
-                .eq("id", value: mutation.entityId.uuidString)
-                .execute()
+    }
+
+    private func replay(mutation: SyncMutation) async throws {
+        let tableName = self.tableName(for: mutation.entityType)
+        let table = supabase.from(tableName)
+
+        do {
+            let jsonDict = try JSONDecoder().decode([String: AnyJSON].self, from: mutation.payload)
+            let action = mutation.action
             
-        case .create:
-            try await table.insert(jsonDict)
-                .execute()
-            
-        case .delete:
-            try await table.delete()
-                .eq("id", value: mutation.entityId.uuidString)
-                .execute()
+            if action == .update {
+                try await table.update(jsonDict).eq("id", value: mutation.entityId.uuidString).execute()
+            } else if action == .create {
+                try await table.insert(jsonDict).execute()
+            } else if action == .delete {
+                try await table.delete().eq("id", value: mutation.entityId.uuidString).execute()
+            }
+        } catch {
+            print("SyncEngine Replay Error for \(mutation.entityType): \(error)")
+            throw error
         }
     }
     

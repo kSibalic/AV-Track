@@ -40,21 +40,23 @@ struct ContentView: View {
             }
         }
         .tabViewStyle(.sidebarAdaptable)
-        .scannerEnvironment()
     }
 
     @ViewBuilder
     private func destinationView(for tab: AppTab) -> some View {
-        switch tab {
-        case .inventory:
-            InventoryListView()
-        case .transfer:
-            TransferView()
-        case .manifests:
-            ManifestListView()
-        case .settings:
-            SettingsView()
+        Group {
+            switch tab {
+            case .inventory:
+                InventoryListView()
+            case .transfer:
+                TransferView()
+            case .manifests:
+                ManifestListView()
+            case .settings:
+                SettingsView()
+            }
         }
+        .scannerEnvironment()
     }
 }
 

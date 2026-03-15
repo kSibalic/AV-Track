@@ -31,7 +31,7 @@ final class AuthManager {
             isLoading = true
             session = try await supabase.auth.session
             
-            for await state in await supabase.auth.authStateChanges {
+            for await state in supabase.auth.authStateChanges {
                 self.session = state.session
             }
         } catch {

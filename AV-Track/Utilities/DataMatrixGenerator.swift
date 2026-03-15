@@ -9,16 +9,18 @@ import Foundation
 import UIKit
 import CoreImage.CIFilterBuiltins
 
-struct DataMatrixGenerator {
+struct BarcodeGenerator {
+    @MainActor
     static func generate(from string: String) -> UIImage? {
         let context = CIContext()
         
-        guard let filter = CIFilter(name: "CIDataMatrixCodeGenerator") else {
+        guard let filter = CIFilter(name: "CIQRCodeGenerator") else {
             return nil
         }
         
         let data = string.data(using: .utf8)
         filter.setValue(data, forKey: "inputMessage")
+        filter.setValue("M", forKey: "inputCorrectionLevel")
         
         guard let outputImage = filter.outputImage else {
             return nil

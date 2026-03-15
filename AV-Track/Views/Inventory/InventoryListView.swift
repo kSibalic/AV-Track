@@ -61,6 +61,9 @@ struct InventoryListView: View {
                 ItemFormView(mode: .add)
             }
         }
+        .navigationDestination(for: InventoryItem.self) { item in
+            InventoryDetailView(item: item)
+        }
         .navigationDestination(item: $scannedItem) { item in
             InventoryDetailView(item: item)
         }
