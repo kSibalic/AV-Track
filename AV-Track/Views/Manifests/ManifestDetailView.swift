@@ -18,7 +18,10 @@ struct ManifestDetailView: View {
     
     var body: some View {
         List {
-            Section("Status") {
+            Section("Job Details") {
+                if !manifest.location.isEmpty {
+                    Label(manifest.location, systemImage: "map")
+                }
                 Picker("Job Status", selection: Bindable(manifest).status) {
                     Text("Draft").tag(ManifestStatus.draft)
                     Text("Packed").tag(ManifestStatus.packed)
@@ -62,7 +65,6 @@ struct ManifestDetailView: View {
         .onChange(of: scanner.lastScannedSKU) { _, newSKU in
             guard let sku = newSKU else { return }
             viewModel.handleScan(sku: sku, for: manifest, modelContext: modelContext)
-            scanner.lastScannedSKU = nil
         }
         .sheet(isPresented: $viewModel.showDependencySuggestions) {
             DependencySuggestionSheet(dependencies: viewModel.pendingSuggestions) { acceptedDependency in
@@ -71,8 +73,8 @@ struct ManifestDetailView: View {
         }
         .sheet(isPresented: $showItemPicker) {
             NavigationStack {
-                ItemPickerSheet { selectedItem in
-                    viewModel.addItem(selectedItem, to: manifest, modelContext: modelContext)
+                ItemPickerSheet { selectedItem, qty in
+                    viewModel.addItem(selectedItem, quantity: qty, to: manifest, modelContext: modelContext)
                     showItemPicker = false
                 }
             }
@@ -113,7 +115,10 @@ struct ItemPickerSheet: View {
     @Query(sort: \InventoryItem.name) private var allItems: [InventoryItem]
     
     @State private var searchText = ""
-    let onSelect: (InventoryItem) -> Void
+    @State private var selectedItemForQuantity: InventoryItem? = nil
+    @State private var quantityToAdd: Int = 1
+    
+    let onSelect: (InventoryItem, Int) -> Void
     
     var filteredItems: [InventoryItem] {
         if searchText.isEmpty { return allItems }
@@ -125,17 +130,70 @@ struct ItemPickerSheet: View {
     
     var body: some View {
         List(filteredItems) { item in
-            Button {
-                onSelect(item)
-            } label: {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     VStack(alignment: .leading) {
                         Text(item.name).font(.headline).foregroundStyle(.primary)
                         Text(item.sku).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Image(systemName: "plus.circle")
-                        .foregroundStyle(Color.accentColor)
+                    if selectedItemForQuantity == item {
+                        Button("Cancel") {
+                            withAnimation {
+                                selectedItemForQuantity = nil
+                            }
+                        }
+                        .font(.caption.bold())
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                    } else {
+                        Button {
+                            withAnimation {
+                                selectedItemForQuantity = item
+                                quantityToAdd = 1
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                }
+                
+                if selectedItemForQuantity == item {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Stepper("Quantity: \(quantityToAdd)", value: $quantityToAdd, in: 1...max(1, item.totalStock))
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Button("Add") {
+                                onSelect(item, quantityToAdd)
+                                withAnimation {
+                                    selectedItemForQuantity = nil
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        
+                        Text("Max available: \(item.totalStock)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if selectedItemForQuantity != item {
+                    withAnimation {
+                        selectedItemForQuantity = item
+                        quantityToAdd = 1
+                    }
                 }
             }
         }

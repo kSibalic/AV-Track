@@ -37,6 +37,7 @@ struct ManifestListView: View {
                 Form {
                     Section("Job Details") {
                         TextField("Job Name / Client", text: $viewModel.newManifestName)
+                        TextField("Location", text: $viewModel.newManifestLocation)
                         DatePicker("Event Date", selection: $viewModel.newManifestDate, displayedComponents: [.date, .hourAndMinute])
                     }
                 }
@@ -92,6 +93,12 @@ struct ManifestRowView: View {
                 Text("\(manifest.items.count) items")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.tertiary)
+            }
+            
+            if !manifest.location.isEmpty {
+                Label(manifest.location, systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)

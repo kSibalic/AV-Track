@@ -33,7 +33,7 @@ final class ScannerInputManager {
     func handleKeyPress(_ press: KeyPress) -> KeyPress.Result {
         let now = Date()
         
-        if now.timeIntervalSince(lastKeystrokeTime) > 0.1 && !buffer.isEmpty {
+        if now.timeIntervalSince(lastKeystrokeTime) > 0.5 && !buffer.isEmpty {
             buffer = ""
         }
         

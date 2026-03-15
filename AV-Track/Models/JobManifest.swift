@@ -21,6 +21,7 @@ final class JobManifest {
     
     var id: UUID
     var jobName: String
+    var location: String
     var eventDate: Date
     var status: ManifestStatus
     
@@ -29,11 +30,13 @@ final class JobManifest {
     
     init(
         jobName: String,
+        location: String = "",
         eventDate: Date,
         status: ManifestStatus = .draft
     ) {
         self.id = UUID()
         self.jobName = jobName
+        self.location = location
         self.eventDate = eventDate
         self.status = status
     }

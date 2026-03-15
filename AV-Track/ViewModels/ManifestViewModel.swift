@@ -13,6 +13,7 @@ import SwiftData
 final class ManifestViewModel {
     var showAddManifestForm = false
     var newManifestName = ""
+    var newManifestLocation = ""
     var newManifestDate = Date()
     
     var showDependencySuggestions = false
@@ -23,14 +24,40 @@ final class ManifestViewModel {
         
         let manifest = JobManifest(
             jobName: newManifestName,
+            location: newManifestLocation,
             eventDate: newManifestDate,
             status: .draft
         )
         
         modelContext.insert(manifest)
+        
+        let payload: [String: Any] = [
+            "id": manifest.id.uuidString,
+            "job_name": manifest.jobName,
+            "location": manifest.location,
+            "event_date": ISO8601DateFormatter().string(from: manifest.eventDate),
+            "status": manifest.status.rawValue
+        ]
+        
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            let mutation = SyncMutation(
+                entityType: "JobManifest",
+                entityId: manifest.id,
+                action: .create,
+                payload: data
+            )
+            modelContext.insert(mutation)
+        }
+        
         try? modelContext.save()
         
+        // Auto-sync
+        Task {
+            await SyncEngine.shared.syncNow(modelContext: modelContext)
+        }
+        
         newManifestName = ""
+        newManifestLocation = ""
         newManifestDate = Date()
         showAddManifestForm = false
     }
@@ -49,16 +76,25 @@ final class ManifestViewModel {
         addItem(item, to: manifest, modelContext: modelContext)
     }
     
-    func addItem(_ item: InventoryItem, to manifest: JobManifest, modelContext: ModelContext) {
-        if let existingManifestItem = manifest.items.first(where: { $0.item == item }) {
-            existingManifestItem.quantity += 1
+    func addItem(_ item: InventoryItem, quantity: Int = 1, to manifest: JobManifest, modelContext: ModelContext) {
+        if let existingManifestItem = manifest.items.first(where: { $0.item?.id == item.id }) {
+            let newTotal = existingManifestItem.quantity + quantity
+            existingManifestItem.quantity = min(newTotal, item.totalStock)
+            createManifestItemMutation(existingManifestItem, action: .update, modelContext: modelContext)
         } else {
-            let newlyAdded = ManifestItem(quantity: 1, manifest: manifest, item: item)
-            manifest.items.append(newlyAdded)
-            modelContext.insert(newlyAdded)
+            let actualQuantity = min(quantity, item.totalStock)
+            if actualQuantity > 0 {
+                let newlyAdded = ManifestItem(quantity: actualQuantity, manifest: manifest, item: item)
+                manifest.items.append(newlyAdded)
+                modelContext.insert(newlyAdded)
+                createManifestItemMutation(newlyAdded, action: .create, modelContext: modelContext)
+            }
         }
         
         try? modelContext.save()
+        Task {
+            await SyncEngine.shared.syncNow(modelContext: modelContext)
+        }
         checkDependencies(for: item)
     }
     
@@ -67,8 +103,12 @@ final class ManifestViewModel {
             manifest.items.remove(at: index)
         }
         
+        createManifestItemMutation(item, action: .delete, modelContext: modelContext)
         modelContext.delete(item)
         try? modelContext.save()
+        Task {
+            await SyncEngine.shared.syncNow(modelContext: modelContext)
+        }
     }
     
     private func checkDependencies(for item: InventoryItem) {
@@ -83,13 +123,43 @@ final class ManifestViewModel {
     func acceptSuggestion(_ dependency: ItemDependency, into manifest: JobManifest, modelContext: ModelContext) {
         guard let childItem = dependency.childItem else { return }
         if let existingManifestItem = manifest.items.first(where: { $0.item == childItem }) {
-            existingManifestItem.quantity += 1
+            if existingManifestItem.quantity < childItem.totalStock {
+                existingManifestItem.quantity += 1
+                createManifestItemMutation(existingManifestItem, action: .update, modelContext: modelContext)
+            }
         } else {
-            let newlyAdded = ManifestItem(quantity: 1, manifest: manifest, item: childItem)
-            manifest.items.append(newlyAdded)
-            modelContext.insert(newlyAdded)
+            if childItem.totalStock > 0 {
+                let newlyAdded = ManifestItem(quantity: 1, manifest: manifest, item: childItem)
+                manifest.items.append(newlyAdded)
+                modelContext.insert(newlyAdded)
+                createManifestItemMutation(newlyAdded, action: .create, modelContext: modelContext)
+            }
         }
         
         try? modelContext.save()
+        Task {
+            await SyncEngine.shared.syncNow(modelContext: modelContext)
+        }
+    }
+    
+    private func createManifestItemMutation(_ manifestItem: ManifestItem, action: SyncAction, modelContext: ModelContext) {
+        guard let manifest = manifestItem.manifest, let item = manifestItem.item else { return }
+        
+        let payload: [String: Any] = [
+            "id": manifestItem.id.uuidString,
+            "manifest_id": manifest.id.uuidString,
+            "item_id": item.id.uuidString,
+            "quantity": manifestItem.quantity
+        ]
+        
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            let mutation = SyncMutation(
+                entityType: "ManifestItem",
+                entityId: manifestItem.id,
+                action: action,
+                payload: data
+            )
+            modelContext.insert(mutation)
+        }
     }
 }

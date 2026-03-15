@@ -31,10 +31,12 @@ struct ItemFormView: View {
     @State private var isSerialized = true
     @State private var category = ""
     @State private var totalStock = 1
+    @State private var initialLocation: String = AppLocations.all.first ?? "Warehouse"
+    @State private var showingLocationPicker = false
 
     private let suggestedCategories = [
         "Speakers", "Microphones", "Cables", "Lighting",
-        "Staging", "Video", "Power", "Rigging", "Cases", "Other"
+        "Staging", "Video", "Power", "Rigging", "Cases", "Tech"
     ]
 
     private var isValid: Bool {
@@ -130,6 +132,35 @@ struct ItemFormView: View {
                     Text("Total Stock")
                 }
             }
+            
+            if case .add = mode {
+                Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showingLocationPicker = true
+                    }
+                } label: {
+                    LabeledContent("Stored In") {
+                        HStack {
+                            Text(initialLocation)
+                                .foregroundStyle(.primary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
+                .confirmationDialog("Select Location", isPresented: $showingLocationPicker, titleVisibility: .visible) {
+                    ForEach(AppLocations.all, id: \.self) { loc in
+                        Button(loc) {
+                            initialLocation = loc
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
+            }
         }
     }
 
@@ -158,7 +189,7 @@ struct ItemFormView: View {
             modelContext.insert(item)
             savedItem = item
             actionEnum = .create
-
+            
         case .edit(let item):
             item.sku = sku.trimmingCharacters(in: .whitespaces)
             item.name = name.trimmingCharacters(in: .whitespaces)
@@ -169,7 +200,7 @@ struct ItemFormView: View {
             actionEnum = .update
         }
         
-        let payload: [String: Any] = [
+        let itemPayload: [String: Any] = [
             "id": savedItem.id.uuidString,
             "sku": savedItem.sku,
             "name": savedItem.name,
@@ -178,7 +209,7 @@ struct ItemFormView: View {
             "total_stock": savedItem.totalStock
         ]
                 
-        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+        if let data = try? JSONSerialization.data(withJSONObject: itemPayload) {
             let mutation = SyncMutation(
                 entityType: "inventoryitem",
                 entityId: savedItem.id,
@@ -186,6 +217,39 @@ struct ItemFormView: View {
                 payload: data
             )
             modelContext.insert(mutation)
+        }
+        
+        if case .add = mode {
+            let location = ItemLocation(
+                locationName: initialLocation,
+                quantity: totalStock,
+                item: savedItem
+            )
+            modelContext.insert(location)
+            
+            let locPayload: [String: Any] = [
+                "id": location.id.uuidString,
+                "item_id": savedItem.id.uuidString,
+                "location_name": initialLocation,
+                "quantity": totalStock,
+                "last_updated": ISO8601DateFormatter().string(from: location.lastUpdated)
+            ]
+            
+            if let locData = try? JSONSerialization.data(withJSONObject: locPayload) {
+                let locMutation = SyncMutation(
+                    entityType: "ItemLocation",
+                    entityId: location.id,
+                    action: .create,
+                    payload: locData
+                )
+                modelContext.insert(locMutation)
+            }
+        }
+        
+        try? modelContext.save()
+        
+        Task {
+            await SyncEngine.shared.syncNow(modelContext: modelContext)
         }
 
         dismiss()
