@@ -9,8 +9,10 @@ import SwiftUI
 import Auth
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @AppStorage("printerIPAddress") private var printerIP = ""
     @State private var authManager = AuthManager.shared
+    @State private var syncViewModel = SyncViewModel()
 
     var body: some View {
         Form {
@@ -19,6 +21,9 @@ struct SettingsView: View {
             aboutSection
         }
         .navigationTitle("Settings")
+        .onAppear {
+            syncViewModel.refreshPendingCount(modelContext: modelContext)
+        }
     }
 
     // MARK: - Printer
@@ -53,16 +58,36 @@ struct SettingsView: View {
             }
             
             LabeledContent {
-                Text("—")
-                    .foregroundStyle(.secondary)
+                if syncViewModel.isSyncing {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text("\(syncViewModel.pendingCount)")
+                        .foregroundStyle(syncViewModel.pendingCount > 0 ? .orange : .secondary)
+                }
             } label: {
                 Label("Pending Mutations", systemImage: "arrow.triangle.2.circlepath")
             }
             
+            if let error = syncViewModel.lastError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            
             Button {
-                // TODO: Manual sync trigger
+                Task {
+                    await syncViewModel.forceSync(modelContext: modelContext)
+                }
             } label: {
                 Label("Sync Now", systemImage: "arrow.clockwise")
+            }
+            .disabled(syncViewModel.isSyncing || syncViewModel.pendingCount == 0 || !syncViewModel.isConnected)
+            
+            if !syncViewModel.isConnected {
+                Label("Waiting for connection...", systemImage: "wifi.slash")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
             }
             
             Button(role: .destructive) {

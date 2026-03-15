@@ -6,13 +6,22 @@
 //
 
 import SwiftUI
+import Network
 
-struct NetworkMonitor: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+@Observable
+final class NetworkMonitor {
+    static let shared = NetworkMonitor()
+    
+    var isConnected = true
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "AVTrack.NetworkMonitor")
+    
+    private init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isConnected = path.status == .satisfied
+            }
+        }
+        monitor.start(queue: queue)
     }
-}
-
-#Preview {
-    NetworkMonitor()
 }
